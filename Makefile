@@ -13,7 +13,7 @@ GITROOT := $(shell git rev-parse --show-toplevel)
 GO_CODE := $(shell ls go.mod go.sum **/*.go)
 version := $(shell cat ${GITROOT}/release/version)
 
-REGISTRY ?= harbor-repo.vmware.com/vcloud
+REGISTRY ?= vmwaresaas.jfrog.io/vdp-public
 # Image URL to use all building/pushing image targets
 IMG ?= ${REGISTRY}/cluster-api-provider-cloud-director:${version}
 
