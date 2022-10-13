@@ -10,6 +10,11 @@ package vcdsdk
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+
 	"github.com/antihax/optional"
 	"github.com/peterhellberg/link"
 	"github.com/vmware/cloud-provider-for-cloud-director/pkg/util"
@@ -17,10 +22,6 @@ import (
 	"github.com/vmware/go-vcloud-director/v2/govcd"
 	"github.com/vmware/go-vcloud-director/v2/types/v56"
 	"k8s.io/klog"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
 )
 
 type OneArm struct {
@@ -107,6 +108,7 @@ func (gatewayManager *GatewayManager) getOVDCNetwork(ctx context.Context, networ
 		return nil, fmt.Errorf("obtained nil org when getting org by name [%s]", client.ClusterOrgName)
 	}
 	networkFound := false
+	networkCount := 0
 	for {
 		ovdcNetworks, resp, err := ovdcNetworksAPI.GetAllVdcNetworks(ctx, org.Org.ID, pageNum, 32, nil)
 		if err != nil {
@@ -119,16 +121,19 @@ func (gatewayManager *GatewayManager) getOVDCNetwork(ctx context.Context, networ
 		}
 
 		for _, ovdcNetwork := range ovdcNetworks.Values {
-			if networkFound {
-				return nil, fmt.Errorf("found more than one network with the name [%s] in the org [%s] - please ensure the network name is unique within an org", gatewayManager.NetworkName, client.ClusterOrgName)
-			}
 			if ovdcNetwork.Name == gatewayManager.NetworkName {
 				ovdcNetworkID = ovdcNetwork.Id
 				networkFound = true
+				networkCount++
 			}
 		}
 		pageNum++
 	}
+
+	if networkFound && networkCount > 1 {
+		return nil, fmt.Errorf("found more than one network with the name [%s] in the org [%s] - please ensure the network name is unique within an org", gatewayManager.NetworkName, client.ClusterOrgName)
+	}
+
 	if ovdcNetworkID == "" {
 		return nil, fmt.Errorf("unable to obtain ID for ovdc network name [%s]",
 			gatewayManager.NetworkName)
